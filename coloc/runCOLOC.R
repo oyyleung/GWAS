@@ -3,12 +3,17 @@
 Created for specific use at MS & PD Tissue Bank Database, Imperial College London
 Copyright (c) [2023] [Yeung Yeung Leung]
 "
+#######################################################################
+# function for running and saving coloc results
+# assumed input file processed by preproCOLOC.py 
+# [fastGWA summary statistics output & GTEX eQTL results format]
+#######################################################################
+
+library(coloc)
 runCOLOC <- function(eN,#eQTL sample N number
                      sdY,#standard deviation of phenotype
                      inFileName,#filename of csv file containing eQTL and GWAS statistics (from prepData4COLOC.py)
-                     outFileName){
-  
-  library(coloc)
+                     outFileName){ 
   data <- read.csv(file=inFileName,header=T)
   data=data[!duplicated(data$SNP),] 
   genes<-unique(data$gene_id)
@@ -38,4 +43,54 @@ runCOLOC <- function(eN,#eQTL sample N number
   }
   write.csv(summary, outFileName, na = "", row.names = F, sep=",")
 
+}
+
+
+#######################################################################
+# run colo
+#######################################################################
+
+GTEXdir = "E://GTEXv7/"
+filename='MSf3MAF_Het_imputed_rsid_'
+tissues=c(
+'Brain_Substantia_nigra',    
+'Brain_Spinal_cord_cervical_c-1',      
+ 'Brain_Anterior_cingulate_cortex_BA24',
+ 'Brain_Caudate_basal_ganglia',
+ 'Brain_Cerebellar_Hemisphere',
+ 'Brain_Cerebellum',
+ 'Brain_Cortex',
+ 'Brain_Frontal_Cortex_BA9',
+ 'Brain_Hippocampus',
+ 'Brain_Hypothalamus',
+ 'Brain_Nucleus_accumbens_basal_ganglia',
+ 'Brain_Putamen_basal_ganglia',
+ 'Cells_EBV-transformed_lymphocytes',
+ 'Muscle_Skeletal',
+ 'Nerve_Tibial',
+ 'Pituitary',
+ 'Thyroid',
+ 'Whole_Blood'
+)
+features= c('nSFG', 'nCG', 'nThal', 'nOcc', 'nPons', 'nCbDN')
+# load file containing sample size of eQTL study
+tissueN=read.csv(paste0(GTEXdir,'tissueN.csv'), header=TRUE)
+# load file containing standard deviation of phenotype feature
+sdYs=read.csv(paste0(GTEXdir,'sdYs.csv'), header=TRUE)
+
+# loop through phentypes and tissues
+for (pheno in features){
+  for (tissue in tissues){
+    eN<-tissueN$N[tissues==tissue]
+    sdY<-sdYs$sdYs[features==pheno]
+    for (i in c(1:22)){
+      inFileName = paste(GTEXdir,filename,pheno,'_',tissue,'_chr',i,'.txt.gz', sep='')
+      outFileName = paste(GTEXdir,'coloc_',filename,pheno,'_',tissue,'_chr',i,'.csv', sep='')
+      if (file.exists(outFileName)) next
+      runCOLOC(eN,#eQTL sample N number
+              sdY,#standard deviation of phenotype
+              inFileName,#filename of csv file containing eQTL and GWAS statistics (from prepData4COLOC.py)
+              outFileName)
+    }
+  }
 }
